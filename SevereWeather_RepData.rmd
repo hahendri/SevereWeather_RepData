@@ -1,14 +1,13 @@
 ---
-title: "Severe Weather Reproducible Data Peer Assignment 2"
+title: "Municipalities Should Prioritize Preparation for Tornadoes and Floods"
 output: 
   html_document:
     keep_md: true
 ---
 
-# Severe Weather Reproducible Data Peer Assignment 2
----------------------------------------------------
+**Author - Harland Hendricks**
 
-Synopsis...............
+National Weather Service data was used to determine which types of weather events cause the most harm to the population and the most economic damage to property and crops.  This analysis will inform government and municipal managers in the prioritization of resources to prepare for weather events.  The analysis showed that tornadoes, by a wide margin, cause the most harm to the population when taking into account total injured and dead due to an event.  The analysis also showed that the most economic damage is caused by flooding, hurricanes/typhoons, and tornadoes.  I recommend that local, state, and federal governments prioritize resources for tornado education, warning, and protection to best protect the population.  I also recommend that these governments prioritize resources to improve structural integrity of buildings when faced with high winds from tornadoes and hurricanes/typhoons.  Finally, governments should work with engineers and focus on storm water management to protect locales from flooding damage to crops and property.    
 
 ## Data Processing
 
@@ -16,12 +15,13 @@ Synopsis...............
 sessionInfo()
 ```
 
-**The following links are helpful to understand the data:**
+**The following links are helpful to understand the data**
 
-        1. National Weather Service [Storm Data Documentation](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf)
-        2. National Climatic Data Center Storm Events [FAQ](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf)
+1. National Weather Service [Storm Data Documentation](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf)
 
-setwd("C:/Users/Harland/Desktop/Coursera/SevereWeather_RepData")
+2. National Climatic Data Center Storm Events [FAQ](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf)
+
+Set your desired working directory
 
 Load required libraries
 
@@ -29,12 +29,11 @@ Load required libraries
 library(R.utils)
 library(dplyr)
 library(ggplot2)
-library(lattice)
 ```
 
 Load Data
 
-```{r}
+```{r cache = TRUE}
 fileurl = "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
 if (!file.exists("data")) {
         dir.create("data")
@@ -54,6 +53,7 @@ healthdata <- data %>%
         select(EVTYPE, FATALITIES, INJURIES) %>%
         mutate(total_affected = FATALITIES + INJURIES) %>%
         rename_all(tolower)
+head(healthdata, 20)
 ```
 
 Create a dataset for the analysis of types of weather events and economic damage.
@@ -78,17 +78,20 @@ econdata <- econdata %>%
 ## Characterize multiple column as numeric
 econdata$propdmgmult <- as.numeric(econdata$propdmgmult)
 econdata$cropdmgmult <- as.numeric(econdata$cropdmgmult)
-## Add columns to account for multiple
+## Add total columns to account for the multiple
 econdata <- econdata %>%
         mutate(property_damage = propdmg * propdmgmult) %>%
         mutate(crop_damage = cropdmg * cropdmgmult) %>%
         select(evtype, property_damage, crop_damage)
 econdata$total_damage <- rowSums(econdata[, c(2, 3)], na.rm = TRUE)
+head(econdata, 20)
 ```
 
 ## Questions for Analysis
 
 1. Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+
+Group healthdata by evtype and summarize by using the sum of the total_affected column.  Arrange total in descending order and filter by the top 5 events that are most harmful.
 
 ```{r}
 health_summary <- healthdata %>%
@@ -97,10 +100,13 @@ health_summary <- healthdata %>%
         as.data.frame(health_summary) %>%
         filter(total != 0) %>%
         arrange(desc(total)) %>%
-        slice(1:15)
+        slice(1:5)
+health_summary
 ```
 
 2. Across the United States, which types of events have the greatest economic consequences?
+
+Group econdata by evtype and summarize by using the sum of the total_damage column.  Arrange total in descending order and filter by the top 5 events that are most economically damaging.
 
 ```{r}
 econ_summary <- econdata %>%
@@ -109,118 +115,48 @@ econ_summary <- econdata %>%
         as.data.frame(econ_summary) %>%
         filter(total != 0) %>%
         arrange(desc(total)) %>%
-        slice(1:15)
+        slice(1:5)
+econ_summary
 ```
 
 ## Results
 
-Calculate the total number of steps taken per day
+### Figure 1
 
 ```{r}
-spd <- data %>% 
-        group_by(date) %>%
-        summarize(steps = sum(steps)) %>%
-        as.data.frame(spd)
-spd
+ggplot(health_summary, aes(reorder(evtype, -total), total)) + geom_col() + labs(title =
+        "Total Injuries and Deaths by Top 5 Weather Events") + labs(x = "Weather Event Type") +
+        labs(y = "Total Injuries and Deaths")
 ```
 
-Make a histogram of the total number of steps taken each day
+The graph in figure 1 shows that the top three weather events harmful to the population are:
+
+        1.  Tornado (By a wide margin)
+        2.  Excessive Heat
+        3.  Thunderstorm Wind
+
+### Figure 2
 
 ```{r}
-hist(spd$steps, main = "Total Steps Per Day", xlab = "Steps", col = "red", breaks = 10)
-rug(spd$steps)
+options(scipen = 999)
+ggplot(econ_summary, aes(reorder(evtype, -total), total)) + geom_col() + labs(title =
+        "Total Damage by Top 5 Weather Events") + labs(x = "Weather Event Type") +
+        labs(y = "Total Crop and Property Damage (USD)")
+options(scipen = 99)
 ```
 
-Calculate and report the mean and median of the total number of steps taken per day
+The graph in figure 2 shows that the top three weather events that cause the most economic damage are:
 
-```{r}
-mean(spd$steps, na.rm = TRUE)
-median(spd$steps, na.rm = TRUE)
-```
+        1.  Flood
+        2.  Hurricane/Typhoon
+        3.  Tornado
 
-## What is the average daily activity pattern?
+It should also be noted that 3/5 of these weather event types are flood/water related.
 
-Make a time series plot (i.e. type="l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+## Recommendations
 
-```{r}
-ints <- data %>%
-        group_by(interval) %>%
-        summarise(steps = mean(steps, na.rm = TRUE)) %>%
-        as.data.frame(ints)
-plot(x = ints$interval, y = ints$steps, type = "l", xlab = "5-minute Interval of Day",
-        ylab = "Average Number of Steps (All Days)", main = 
-        "Average Number of Steps per Interval Across All Days")
-```
+This analysis shows that municipalities should prioritize resources as follows:
 
-Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+1.  To protect the population from weather events, the municipality should educate the public on tornado and thunderstorm actions to reduce the likelihood of injury or death.  The municipality should also provide tornado/thunderstorm warning systems and shelters.  Lastly, the municipality should provide a clean water supply to hydrate and reliable power for air conditioning to reduce heat related injuries and deaths.
 
-```{r}
-filter(ints, steps == max(ints[,2]))
-```
-
-## Imputing missing values
-
-Calculate and report the total number of missing values in the dataset
-
-```{r}
-sum(is.na(data))
-```
-
-Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
-
-*I will use the mean steps over all days for the 5-minute interval, which was calculated above in **ints** dataset to fill in missing data.  The following code creates a duplicate dataset of the original data, creates a vector of intervals with missing step data, and indexes a location for the mean steps over all days for a given interval in the ints dataset from above*
-
-```{r}
-data.nafill <- data
-steps.na <- data.nafill$interval[is.na(data.nafill$steps)]
-index <- sapply(steps.na, function(steps) which(ints$interval == steps))
-```
-
-Create a new dataset that is equal to the original dataset but with the missing data filled in.
-
-```{r}
-data.nafill$steps[is.na(data.nafill$steps)] <- ints$steps[index]
-```
-
-Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day.
-
-```{r}
-spd.nafill <- data.nafill %>% 
-        group_by(date) %>%
-        summarize(steps = sum(steps)) %>%
-        as.data.frame(spd.nafill)
-hist(spd.nafill$steps, main = "Total Steps Per Day", xlab = "Steps", col = "red", breaks = 10)
-rug(spd.nafill$steps)
-mean(spd.nafill$steps)
-median(spd.nafill$steps)
-```
-
-Do these values differ from the estimates from the first part of the assignment?
-
-**The mean does not differ, but the median does slightly.**
-
-What is the impact of imputing missing data on the estimates of the total daily number of steps?
-
-**The estimate of total daily steps for the missing days makes those days all equal, and increases the frequency of seeing between 10,000 and 10,250 steps durring a day when estimating total stepsper day.  When looking at the histogram with imputed data, you can see that the middle bar is taller than the one in the histogram using the data with missing values.**
-
-## Are there differences in activity patterns between weekdays and weekends?
-
-Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
-
-```{r}
-weekend <- c(6, 7)
-data.wday <- data.nafill 
-data.wday$daytype <- factor((wday(data.wday$date) %in% weekend), levels = c(TRUE, FALSE),
-        labels = c("weekend", "weekday"))
-```
-
-Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
-
-```{r}
-wewdints <- data.wday %>%
-        group_by(daytype, interval) %>%
-        summarise(steps = mean(steps)) %>%
-        as.data.frame(wewdints)
-xyplot(steps ~ interval | daytype, data = wewdints, layout = c(1, 2), type = "l", 
-       xlab = "Interval", ylab = "Number of steps", index.cond = list(c(2, 1)))
-```
+2.  To protect the municipality economically, the municipality should work with engineers to improve storm water management to reduce damage from flooding.  Also, the municipality should ensure that engineering specifications are sufficient to protect property from high winds associated with hurricanes, typhoons, and tornadoes. 
